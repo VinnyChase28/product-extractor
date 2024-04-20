@@ -31,7 +31,7 @@ class DataProcessor:
 
 class OpenAIInterface:
     def __init__(self, api_key):
-        self.llm = OpenAI(temperature=0.7, openai_api_key=api_key)
+        self.llm = OpenAI(temperature=0, openai_api_key=api_key)
 
     def generate_response(self, input_text):
         return self.llm(input_text)
