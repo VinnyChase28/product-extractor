@@ -1,5 +1,5 @@
 import streamlit as st
-from langchain.llms import OpenAI
+from langchain_community.llms import OpenAI
 import pandas as pd
 
 st.title('🦜🔗 Data Processing App')
