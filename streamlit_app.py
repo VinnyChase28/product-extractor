@@ -1,32 +1,44 @@
 import streamlit as st
 from langchain_community.llms import OpenAI
-import pandas as pd
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.pydantic_v1 import BaseModel, Field
+from typing import List, Optional
 
-st.title('🦜🔗 Data Processing App')
+openai_api_key = st.sidebar.text_input('OpenAI API Key', type='password', key='sidebar_api_key')
 
-openai_api_key = st.sidebar.text_input('OpenAI API Key', type='password')
+# Define the schema for extraction
+class ProductSpecs(BaseModel):
+    """Product specifications."""
+    models: Optional[List[str]] = Field(default=None, description="Available models")
+    mounting_options: Optional[List[str]] = Field(default=None, description="Mounting options")
+    voltage_options: Optional[List[str]] = Field(default=None, description="Voltage options")
+    casing_finish: Optional[str] = Field(default=None, description="Casing/finish details")
+    gas_control_options: Optional[List[str]] = Field(default=None, description="Gas control options")
+    electrical_control_options: Optional[List[str]] = Field(default=None, description="Electrical control options")
+    intake_options: Optional[List[str]] = Field(default=None, description="Intake options")
+    discharge_options: Optional[List[str]] = Field(default=None, description="Discharge options")
+    other_options: Optional[List[str]] = Field(default=None, description="Other available options/accessories")
 
 class DataExtractor:
-    def extract_from_pdf(self, pdf_file):
-        # Logic to extract data from PDF
-        pass
+    def __init__(self, api_key: str):
+        self.llm = ChatOpenAI(model="gpt-4-turbo", temperature=0, openai_api_key=api_key)
+        self.prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are an expert product specification extraction algorithm. Only extract relevant specifications from the text. If a specification is not mentioned, return null for its value."),
+            ("human", "{text}"),
+        ])
+        self.runnable = self.prompt | self.llm.with_structured_output(schema=ProductSpecs)
 
-    def extract_from_csv(self, csv_file):
-        # Logic to extract data from CSV
-        pass
+    def extract_from_text(self, text: str):
+        result = self.runnable.invoke({"text": text})
+        return result
 
 class DataProcessor:
     def __init__(self, extractor: DataExtractor):
         self.extractor = extractor
 
-    def process_data(self, file, file_type):
-        if file_type == 'pdf':
-            extracted_data = self.extractor.extract_from_pdf(file)
-        elif file_type == 'csv':
-            extracted_data = self.extractor.extract_from_csv(file)
-        else:
-            raise ValueError("Unsupported file type")
-        # Additional processing logic
+    def process_data(self, text):
+        extracted_data = self.extractor.extract_from_text(text)
         return extracted_data
 
 class OpenAIInterface:
@@ -42,21 +54,31 @@ class StreamlitInterface:
         self.ai_interface = ai_interface
 
     def run(self):
+        st.title('🦜🔗 Product Specification Extraction App')
         with st.form('my_form'):
-            file = st.file_uploader("Upload a file", type=["pdf", "csv"])
-            file_type = st.selectbox("Select file type", ["pdf", "csv"])
+            text_input = st.text_area("Enter product description text")
             submitted = st.form_submit_button('Submit')
 
             if submitted:
                 if not openai_api_key.startswith('sk-'):
                     st.warning('Please enter your OpenAI API key!', icon='⚠️')
                 else:
-                    processed_data = self.data_processor.process_data(file, file_type)
-                    response = self.ai_interface.generate_response(processed_data)
-                    st.write(response)
+                    if text_input:
+                        processed_data = self.data_processor.process_data(text_input)
+                        
+                        # Display the structured object
+                        st.subheader("Extracted Specifications")
+                        st.json(processed_data.dict())
+                        
+                        # Generate response using the AI interface
+                        response = self.ai_interface.generate_response(str(processed_data))
+                        st.subheader("AI Response")
+                        st.write(response)
+                    else:
+                        st.warning('Please provide product description text.')
 
 if __name__ == "__main__":
-    extractor = DataExtractor()
+    extractor = DataExtractor(openai_api_key)
     processor = DataProcessor(extractor)
     ai_interface = OpenAIInterface(openai_api_key)
     streamlit_interface = StreamlitInterface(processor, ai_interface)
