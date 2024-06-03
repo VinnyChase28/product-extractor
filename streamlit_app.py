@@ -10,7 +10,8 @@ openai_api_key = st.sidebar.text_input('OpenAI API Key', type='password', key='s
 # Define the schema for extraction
 class ProductSpecs(BaseModel):
     """Product specifications."""
-    models: Optional[List[str]] = Field(default=None, description="Available models")
+    models: Optional[List[str]] = Field(default=None, description="Available 
+    models")
     mounting_options: Optional[List[str]] = Field(default=None, description="Mounting options")
     voltage_options: Optional[List[str]] = Field(default=None, description="Voltage options")
     casing_finish: Optional[str] = Field(default=None, description="Casing/finish details")
